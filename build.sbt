@@ -17,3 +17,7 @@ libraryDependencies += "org.apache.lucene" % "lucene-analyzers-common" % "7.4.0"
 libraryDependencies += "org.apache.lucene" % "lucene-queryparser" % "7.4.0"
 
 libraryDependencies += "org.apache.lucene" % "lucene-highlighter" % "7.4.0"
+
+libraryDependencies += "org.nlpcn" % "nlp-lang" % "1.7.7"
+
+libraryDependencies += "org.ansj" % "ansj_seg" % "5.1.6"
