@@ -9,7 +9,7 @@ import org.apache.lucene.index.IndexWriterConfig.OpenMode
 import org.apache.lucene.index.{DirectoryReader, IndexWriter, IndexWriterConfig, Term}
 import org.apache.lucene.queryparser.classic.QueryParser
 import org.apache.lucene.search.{IndexSearcher, TermQuery}
-import org.apache.lucene.store.FSDirectory
+import org.apache.lucene.store.{FSDirectory, NIOFSDirectory}
 import org.lionsoul.jcseg.analyzer.JcsegAnalyzer
 import org.lionsoul.jcseg.tokenizer.core.{DictionaryFactory, IWord, JcsegTaskConfig, SegmentFactory}
 
@@ -38,8 +38,7 @@ object Main extends App {
 
   println("1##################################################")
 
-  directory = FSDirectory.open(Paths.get("/Users/jianghang/Coding/luceneTemp"))
-  val indexReader = DirectoryReader.open(directory)
+  val indexReader = DirectoryReader.open(new NIOFSDirectory(Paths.get("/Users/jianghang/Coding/luceneTemp")))
   val indexSearcher = new IndexSearcher(indexReader)
   val query = new TermQuery(new Term("fileName", "ensime")) //包含 搜索
   val top10Docs = indexSearcher.search(query, 10)
@@ -73,4 +72,8 @@ object Main extends App {
   } while (word.isDefined)
 
   println("3##################################################")
+
+  val response = requests.get("http://github.com/hangscer8")
+  println(response.statusCode)
+  println(response.text())
 }
