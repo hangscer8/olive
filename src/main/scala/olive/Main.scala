@@ -3,6 +3,8 @@ package olive
 import java.io.StringReader
 import java.nio.file.Paths
 
+import javafx.application.Application
+import olive.service.MainWindowApplication
 import org.apache.lucene.document.Field.Store
 import org.apache.lucene.document._
 import org.apache.lucene.index.IndexWriterConfig.OpenMode
@@ -17,6 +19,10 @@ import scala.io.{Codec, Source}
 import scala.util.Try
 
 object Main extends App {
+  Application.launch(classOf[MainWindowApplication])
+}
+
+object Main1 {
   var directory = FSDirectory.open(Paths.get("/Users/jianghang/Coding/luceneTemp"))
   val analyzer = new JcsegAnalyzer(JcsegTaskConfig.COMPLEX_MODE, new JcsegTaskConfig(true))
   val indexWriterConfig = new IndexWriterConfig(analyzer).setOpenMode(OpenMode.CREATE)
@@ -72,8 +78,4 @@ object Main extends App {
   } while (word.isDefined)
 
   println("3##################################################")
-
-  val response = requests.get("http://github.com/hangscer8")
-  println(response.statusCode)
-  println(response.text())
 }
