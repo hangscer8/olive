@@ -1,10 +1,18 @@
 package olive
 
+import java.awt.Toolkit
+import java.awt.datatransfer.DataFlavor
 import java.io.StringReader
 import java.nio.file.Paths
 
+import akka.actor.{ActorSystem, Props}
+
+import scala.concurrent.ExecutionContext.Implicits.global
 import javafx.application.Application
-import olive.service.MainWindowApplication
+import javafx.concurrent.Worker.State
+import netscape.javascript.JSObject
+import olive.service.{ClipBoardActor, HahaService, MainWindowApplication}
+import olive.util.{JsonUtil, UIUtil}
 import org.apache.lucene.document.Field.Store
 import org.apache.lucene.document._
 import org.apache.lucene.index.IndexWriterConfig.OpenMode
@@ -14,12 +22,46 @@ import org.apache.lucene.search.{IndexSearcher, TermQuery}
 import org.apache.lucene.store.{FSDirectory, NIOFSDirectory}
 import org.lionsoul.jcseg.analyzer.JcsegAnalyzer
 import org.lionsoul.jcseg.tokenizer.core.{DictionaryFactory, IWord, JcsegTaskConfig, SegmentFactory}
+import scalafx.application
+import scalafx.application.{JFXApp, Platform}
+import scalafx.scene.Scene
+import scalafx.scene.web.WebView
 
+import scala.concurrent.Future
 import scala.io.{Codec, Source}
 import scala.util.Try
 
-object Main extends App {
-  Application.launch(classOf[MainWindowApplication])
+object Main extends JFXApp {
+  stage = new application.JFXApp.PrimaryStage {
+    scene = new Scene(width = Toolkit.getDefaultToolkit.getScreenSize.width * 0.3, height = Toolkit.getDefaultToolkit.getScreenSize.height * 0.8) {
+      thisScene =>
+      title = "olive"
+      content = new WebView() {
+        thisWebView =>
+        thisWebView.prefHeight <== thisScene.height
+        thisWebView.prefWidth <== thisScene.width
+        thisWebView.engine.javaScriptEnabled = true
+        thisWebView.engine.confirmHandler = UIUtil.confirmHandler
+        thisWebView.engine.onAlert = e => UIUtil.alertHandler(e.getData)
+        thisWebView.engine.onError = UIUtil.errorHandler
+        thisWebView.engine.getLoadWorker.stateProperty().addListener((_, _, newState) => {
+          newState match {
+            case State.SUCCEEDED =>
+              val window = thisWebView.engine.executeScript("window").asInstanceOf[JSObject]
+              window.setMember("haha", HahaService)
+            case _ =>
+          }
+        })
+        thisWebView.engine.load(this.getClass.getResource("/html/index.html").toExternalForm)
+      }
+    }
+  }
+  //  Application.launch(classOf[MainWindowApplication])
+  val clipboard = Toolkit.getDefaultToolkit.getSystemClipboard
+  Platform.runLater {
+    val system = ActorSystem("olive")
+    system.actorOf(Props[ClipBoardActor])
+  }
 }
 
 object Main1 {
