@@ -12,7 +12,7 @@ import scala.collection.JavaConverters._
 
 class ClipBoardActor extends Actor with Timers {
   lazy val clipboard = Toolkit.getDefaultToolkit.getSystemClipboard
-  var carchedContent: List[String] = Nil
+  var carchedContent: List[Content] = Nil
 
   var carchedLength = 0
 
@@ -22,22 +22,22 @@ class ClipBoardActor extends Actor with Timers {
     timers.startPeriodicTimer("slow", "getContentsSlow", 1 seconds)
   }
 
-  def getContents: Try[String] = Try(clipboard.getContents(null))
+  def getContents: Try[Content] = Try(clipboard.getContents(null))
     .map { transferable =>
       transferable.isDataFlavorSupported(DataFlavor.javaFileListFlavor) match {
         case true =>
-          JsonUtil.toJson(transferable.getTransferData(DataFlavor.javaFileListFlavor).asInstanceOf[java.util.List[java.io.File]].asScala.sortBy(_.lastModified()))
+          FileContent(transferable.getTransferData(DataFlavor.javaFileListFlavor).asInstanceOf[java.util.List[java.io.File]].asScala.toSet)
         case false =>
-          transferable.getTransferData(DataFlavor.stringFlavor).asInstanceOf[String]
+          StringContent(transferable.getTransferData(DataFlavor.stringFlavor).asInstanceOf[String])
       }
     }
 
   def receiveFast(remainTimes: Int): Receive = {
     case "getContentsFast" =>
       getContents match {
-        case Success(mayBeNewStringSelection) =>
+        case Success(mayBeNewContent) =>
           carchedContent match {
-            case `mayBeNewStringSelection` :: _ => //the same selection ,follow remainTimes
+            case `mayBeNewContent` :: _ => //the same selection ,follow remainTimes
               remainTimes match {
                 case 1 =>
                   timers.cancelAll()
@@ -47,9 +47,9 @@ class ClipBoardActor extends Actor with Timers {
               }
             case _ =>
               //new selection ; reset remainTimes
-              context.system.eventStream.publish(NewSelectionEvent(mayBeNewStringSelection))
+              context.system.eventStream.publish(NewSelectionEvent(mayBeNewContent))
               carchedLength += 1
-              carchedContent ::= mayBeNewStringSelection
+              carchedContent ::= mayBeNewContent
               context.become(receiveFast(30))
           }
         case Failure(exception) =>
@@ -57,25 +57,25 @@ class ClipBoardActor extends Actor with Timers {
       }
     case _ =>
   }
-  org.h2.bnf.Bnf
+
   override def receive: Receive = {
     case "getContentsSlow" =>
       getContents match {
-        case Success(mayBeNewStringSelection) =>
+        case Success(mayBeNewContent) =>
           carchedLength match {
             case 0 =>
               //first new
-              context.system.eventStream.publish(NewSelectionEvent(mayBeNewStringSelection))
+              context.system.eventStream.publish(NewSelectionEvent(mayBeNewContent))
               carchedLength += 1
-              carchedContent ::= mayBeNewStringSelection
+              carchedContent ::= mayBeNewContent
             case _ =>
               carchedContent match {
-                case `mayBeNewStringSelection` :: _ => //the same selection
+                case `mayBeNewContent` :: _ => //the same selection
                 case _ =>
                   //new selection
-                  context.system.eventStream.publish(NewSelectionEvent(mayBeNewStringSelection))
+                  context.system.eventStream.publish(NewSelectionEvent(mayBeNewContent))
                   carchedLength += 1
-                  carchedContent ::= mayBeNewStringSelection
+                  carchedContent ::= mayBeNewContent
                   timers.cancelAll()
                   timers.startPeriodicTimer("fast", "getContentsFast", 0.5 seconds)
                   context.become(receiveFast(30))

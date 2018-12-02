@@ -1,3 +1,11 @@
 package olive.service
 
-case class NewSelectionEvent(contents: String)
+import java.io.File
+
+trait Content
+
+case class StringContent(content: String) extends Content
+
+case class FileContent(files: Set[File]) extends Content
+
+case class NewSelectionEvent(content: Content)
