@@ -4,19 +4,14 @@ import java.awt.Toolkit
 import java.awt.datatransfer.DataFlavor
 
 import akka.actor.{Actor, Timers}
-import olive.util.JsonUtil
 
+import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
-import scala.collection.JavaConverters._
 
 class ClipBoardActor extends Actor with Timers {
   lazy val clipboard = Toolkit.getDefaultToolkit.getSystemClipboard
-  var carchedContent: List[Content] = Nil
-
-  var carchedLength = 0
-
-  val flag = 10
+  var carchedContent: Content = null
 
   override def preStart(): Unit = {
     timers.startPeriodicTimer("slow", "getContentsSlow", 1 seconds)
@@ -28,7 +23,7 @@ class ClipBoardActor extends Actor with Timers {
         case true =>
           FileContent(transferable.getTransferData(DataFlavor.javaFileListFlavor).asInstanceOf[java.util.List[java.io.File]].asScala.toSet)
         case false =>
-          StringContent(transferable.getTransferData(DataFlavor.stringFlavor).asInstanceOf[String])
+          StringContent(transferable.getTransferData(DataFlavor.stringFlavor).asInstanceOf[String].trim)
       }
     }
 
@@ -37,7 +32,7 @@ class ClipBoardActor extends Actor with Timers {
       getContents match {
         case Success(mayBeNewContent) =>
           carchedContent match {
-            case `mayBeNewContent` :: _ => //the same selection ,follow remainTimes
+            case `mayBeNewContent` => //the same selection ,follow remainTimes
               remainTimes match {
                 case 1 =>
                   timers.cancelAll()
@@ -48,12 +43,14 @@ class ClipBoardActor extends Actor with Timers {
             case _ =>
               //new selection ; reset remainTimes
               context.system.eventStream.publish(NewSelectionEvent(mayBeNewContent))
-              carchedLength += 1
-              carchedContent ::= mayBeNewContent
+              carchedContent = mayBeNewContent
               context.become(receiveFast(30))
           }
         case Failure(exception) =>
           println(exception)
+          timers.cancelAll()
+          timers.startPeriodicTimer("slow", "getContentsSlow", 1 seconds)
+          context.unbecome()
       }
     case _ =>
   }
@@ -62,20 +59,18 @@ class ClipBoardActor extends Actor with Timers {
     case "getContentsSlow" =>
       getContents match {
         case Success(mayBeNewContent) =>
-          carchedLength match {
-            case 0 =>
+          carchedContent match {
+            case null =>
               //first new
               context.system.eventStream.publish(NewSelectionEvent(mayBeNewContent))
-              carchedLength += 1
-              carchedContent ::= mayBeNewContent
+              carchedContent = mayBeNewContent
             case _ =>
               carchedContent match {
-                case `mayBeNewContent` :: _ => //the same selection
+                case `mayBeNewContent` => //the same selection
                 case _ =>
                   //new selection
                   context.system.eventStream.publish(NewSelectionEvent(mayBeNewContent))
-                  carchedLength += 1
-                  carchedContent ::= mayBeNewContent
+                  carchedContent = mayBeNewContent
                   timers.cancelAll()
                   timers.startPeriodicTimer("fast", "getContentsFast", 0.5 seconds)
                   context.become(receiveFast(30))
