@@ -2,8 +2,11 @@ package olive.service
 
 import java.awt.Toolkit
 import java.awt.datatransfer.DataFlavor
+import java.awt.image.BufferedImage
+import java.io.ByteArrayOutputStream
 
 import akka.actor.{Actor, Timers}
+import javax.imageio.ImageIO
 
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
@@ -23,7 +26,20 @@ class ClipBoardActor extends Actor with Timers {
         case true =>
           FileContent(transferable.getTransferData(DataFlavor.javaFileListFlavor).asInstanceOf[java.util.List[java.io.File]].asScala.toSet)
         case false =>
-          StringContent(transferable.getTransferData(DataFlavor.stringFlavor).asInstanceOf[String].trim)
+          transferable.isDataFlavorSupported(DataFlavor.imageFlavor) match {
+            case true =>
+              val img = transferable.getTransferData(DataFlavor.imageFlavor).asInstanceOf[java.awt.Image]
+              img.flush()
+              val bi = new BufferedImage(img.getWidth(null), img.getHeight(null), BufferedImage.TYPE_INT_RGB)
+              val outputStream = new ByteArrayOutputStream()
+              ImageIO.write(bi, "jpg", outputStream)
+              outputStream.flush()
+              val r = ImageContent(outputStream.toByteArray)
+              outputStream.close()
+              r
+            case false =>
+              StringContent(transferable.getTransferData(DataFlavor.stringFlavor).asInstanceOf[String].trim)
+          }
       }
     }
 
