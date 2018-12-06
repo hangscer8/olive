@@ -11,7 +11,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import javafx.application.Application
 import javafx.concurrent.Worker.State
 import netscape.javascript.JSObject
-import olive.service.{ClipBoardActor, HahaService}
+import olive.service.{ClipBoardMonitor, HahaService}
 import olive.util.{JsonUtil, UIUtil}
 import org.apache.lucene.document.Field.Store
 import org.apache.lucene.document._
@@ -58,7 +58,7 @@ object Main extends JFXApp {
   }
   Platform.runLater {
     val system = ActorSystem("olive")
-    system.actorOf(Props[ClipBoardActor])
+    system.actorOf(Props[ClipBoardMonitor])
   }
 }
 
