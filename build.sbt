@@ -19,7 +19,8 @@ libraryDependencies += "org.apache.lucene" % "lucene-queryparser" % "7.4.0"
 libraryDependencies += "org.apache.lucene" % "lucene-highlighter" % "7.4.0"
 
 libraryDependencies ++= Seq(
-  "org.scalafx" %% "scalafx" % "8.0.144-R12",
+  "org.openjfx" % "javafx-controls" % "11.0.1",
+  "com.jfoenix" % "jfoenix" % "8.0.8",
   "org.typelevel" %% "cats-effect" % "1.0.0",
   "com.lihaoyi" %% "fastparse" % "2.0.4",
   "com.typesafe.akka" %% "akka-actor" % "2.5.17",
